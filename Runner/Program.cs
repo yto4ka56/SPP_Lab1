@@ -13,7 +13,9 @@ class Program
 
         foreach (var type in assembly.GetTypes().Where(t => t.GetCustomAttribute<MyTestClassAttribute>() != null))
         {
+            Console.ForegroundColor = ConsoleColor.White;
             Console.WriteLine($"\nRunning: {type.Name}");
+            Console.ResetColor();
             var methods = type.GetMethods();
             var setup = methods.FirstOrDefault(m => m.GetCustomAttribute<MyBeforeTestAttribute>() != null);
             var teardown = methods.FirstOrDefault(m => m.GetCustomAttribute<MyAfterTestAttribute>() != null);
@@ -22,7 +24,9 @@ class Program
             {
                 var attr = method.GetCustomAttribute<MyTestAttribute>();
                 if (!string.IsNullOrEmpty(attr?.Skip)) {
+                    Console.ForegroundColor = ConsoleColor.Yellow;
                     Console.WriteLine($"  [SKIP] {method.Name}: {attr.Skip}");
+                    Console.ResetColor();
                     skipped++; continue;
                 }
 
@@ -35,19 +39,24 @@ class Program
                         var result = method.Invoke(instance, args);
                         if (result is Task task) await task;
                         teardown?.Invoke(instance, null);
-
+                        Console.ForegroundColor = ConsoleColor.Green;
                         Console.WriteLine($"  [PASS] {method.Name}");
+                        Console.ResetColor();
                         passed++;
                     }
                     catch (Exception ex) {
                         var inner = ex is TargetInvocationException ? ex.InnerException : ex;
                         string status = inner is MyTestFailedException ? "FAILED" : "ERROR";
+                        Console.ForegroundColor = ConsoleColor.Red;
                         Console.WriteLine($"  [{status}] {method.Name}: {inner.Message}");
+                        Console.ResetColor();
                         failed++;
                     }
                 }
             }
         }
+        Console.ForegroundColor = ConsoleColor.White;
         Console.WriteLine($"\nDone! Passed: {passed}, Failed: {failed}, Skipped: {skipped}");
+        Console.ResetColor();
     }
 }

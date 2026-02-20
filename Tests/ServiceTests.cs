@@ -25,7 +25,7 @@ public class DeliveryTests
     
     [MyTest]
     [MyTestCase(3000, 5, 0)]
-    [MyTestCase(1000, 2, 300)]
+    [MyTestCase(10000, 2, 300)]
     public void CalculateDelivery_VaryingOrderAmounts(int price, double dist, int exp) {
         MyAssert.AreEqual(exp, _service.CalculateDelivery(price, dist));
     }
