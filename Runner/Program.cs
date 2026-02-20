@@ -2,7 +2,7 @@
 using Library;
 using Tests; 
 
-namespace TestRunner;
+namespace Runner;
 
 class Program
 {
