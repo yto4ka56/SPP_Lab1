@@ -1,104 +1,70 @@
 using System.Collections;
 
 
-namespace Library
+namespace Library;
+
+public class MyTestFailedException : Exception 
 {
-    public class MyTestFailedException : Exception 
+    public MyTestFailedException(string message) : base(message) { }
+}
+
+public static class MyAssert 
+{
+    public static void AreEqual(object exp, object act)
     {
-        public MyTestFailedException(string message) : base(message) { }
+        if (!Equals(exp, act)) throw new MyTestFailedException($"Expected {exp}, got {act}");
     }
 
-    public static class MyAssert 
+    public static void AreNotEqual(object v1, object v2)
     {
-        // 1. Проверка на равенство
-        public static void AreEqual(object expected, object actual) 
-        {
-            if (!Equals(expected, actual)) 
-                throw new MyTestFailedException($"Expected: {expected}, but got: {actual}");
-        }
+        if (Equals(v1, v2)) throw new MyTestFailedException($"Values are equal: {v1}");
+    }
 
-        // 2. Проверка на неравенство
-        public static void AreNotEqual(object val1, object val2) 
-        {
-            if (Equals(val1, val2)) 
-                throw new MyTestFailedException($"Values should not be equal, but both are: {val1}");
-        }
+    public static void IsTrue(bool cond)
+    {
+        if (!cond) throw new MyTestFailedException("Expected True");
+    }
 
-        // 3. Истинность условия
-        public static void IsTrue(bool condition) 
-        {
-            if (!condition) throw new MyTestFailedException("Expected True, but got False");
-        }
+    public static void IsFalse(bool cond)
+    {
+        if (cond) throw new MyTestFailedException("Expected False");
+    }
 
-        // 4. Ложность условия
-        public static void IsFalse(bool condition) 
-        {
-            if (condition) throw new MyTestFailedException("Expected False, but got True");
-        }
+    public static void IsNull(object obj)
+    {
+        if (obj != null) throw new MyTestFailedException("Expected null");
+    }
 
-        // 5. Проверка на null
-        public static void IsNull(object obj) 
-        {
-            if (obj != null) throw new MyTestFailedException("Expected null, but object is not null");
-        }
+    public static void IsNotNull(object obj)
+    {
+        if (obj == null) throw new MyTestFailedException("Expected not null");
+    }
 
-        // 6. Проверка на НЕ null
-        public static void IsNotNull(object obj) 
-        {
-            if (obj == null) throw new MyTestFailedException("Expected object instance, but got null");
-        }
+    public static void IsNotEmpty(IEnumerable coll)
+    {
+        if (coll == null || !coll.Cast<object>().Any()) throw new MyTestFailedException("Collection empty");
+    }
+    public static void Contains(object item, IEnumerable coll) { 
+        if (coll == null || !coll.Cast<object>().Contains(item)) throw new MyTestFailedException($"Item {item} not found"); 
+    }
 
-        // 7. Содержится ли элемент в коллекции
-        public static void Contains(object item, IEnumerable collection) 
+    public static void IsInstanceOf<T>(object obj)
+    {
+        if (!(obj is T)) throw new MyTestFailedException($"Not instance of {typeof(T).Name}");
+    }
+    public static void Throws<T>(Action action) where T : Exception {
+        try
         {
-            if (collection == null) throw new MyTestFailedException("Collection is null");
-            
-            bool found = false;
-            foreach (var i in collection) 
-            {
-                if (Equals(i, item)) { found = true; break; }
-            }
-            
-            if (!found) throw new MyTestFailedException($"Item '{item}' not found in collection");
+            action();
         }
-
-        // 8. Пуста ли коллекция
-        public static void IsNotEmpty(IEnumerable collection) 
+        catch (T)
         {
-            if (collection == null || !collection.Cast<object>().Any()) 
-                throw new MyTestFailedException("Collection is empty or null");
+            return;
         }
-
-        // 9. Проверка типа объекта
-        public static void IsInstanceOf<T>(object obj) 
+        catch (Exception ex)
         {
-            if (!(obj is T)) 
-                throw new MyTestFailedException($"Expected type {typeof(T).Name}, but got {obj?.GetType().Name ?? "null"}");
+            throw new MyTestFailedException($"Wrong exception: {ex.GetType().Name}");
         }
-
-        // 10. Проверка на выброс исключения 
-        public static void Throws<T>(Action action) where T : Exception 
-        {
-            try 
-            {
-                action();
-            }
-            catch (T) 
-            {
-                return; 
-            }
-            catch (Exception ex) 
-            {
-                throw new MyTestFailedException($"Expected exception {typeof(T).Name}, but caught {ex.GetType().Name}");
-            }
-            throw new MyTestFailedException($"Expected exception {typeof(T).Name} was not thrown");
-        }
-
-        // 11: Проверка строк на вхождение 
-        public static void StringContains(string substring, string fullString) 
-        {
-            if (string.IsNullOrEmpty(fullString) || !fullString.Contains(substring))
-                throw new MyTestFailedException($"String '{fullString}' does not contain '{substring}'");
-        }
+        throw new MyTestFailedException($"No exception thrown");
     }
 }

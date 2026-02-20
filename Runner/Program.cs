@@ -1,110 +1,53 @@
 ﻿using System.Reflection;
 using Library;
-using Tests;
+using Tests; 
 
-namespace Runner;
+namespace TestRunner;
 
 class Program
 {
-    static async Task Main(string[] args)
+    static async Task Main()
     {
-        try
-        {
-            var assembly = Assembly.GetAssembly(typeof(ServiceTests));
-            await RunTests(assembly);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Ошибка при загрузке сборки: {ex.Message}");
-        }
-    }
+        var assembly = Assembly.GetAssembly(typeof(DeliveryTests));
+        int passed = 0, failed = 0, skipped = 0;
 
-    static async Task RunTests(Assembly assembly)
-    {
-        int passed = 0;
-        int failed = 0;
-        int skipped = 0;
-        
-        var testClasses = assembly.GetTypes()
-            .Where(t => t.GetCustomAttribute<MyTestClassAttribute>() != null);
-
-        foreach (var type in testClasses)
+        foreach (var type in assembly.GetTypes().Where(t => t.GetCustomAttribute<MyTestClassAttribute>() != null))
         {
-            Console.WriteLine($"\nЗапуск тестов в классе: {type.Name}");
-            
-            var setupMethod = type.GetMethods().FirstOrDefault(m => m.GetCustomAttribute<MyBeforeTestAttribute>() != null);
-            var teardownMethod = type.GetMethods().FirstOrDefault(m => m.GetCustomAttribute<MyAfterTestAttribute>() != null);
-            
-            var testMethods = type.GetMethods()
-                .Where(m => m.GetCustomAttribute<MyTestAttribute>() != null);
+            Console.WriteLine($"\nRunning: {type.Name}");
+            var methods = type.GetMethods();
+            var setup = methods.FirstOrDefault(m => m.GetCustomAttribute<MyBeforeTestAttribute>() != null);
+            var teardown = methods.FirstOrDefault(m => m.GetCustomAttribute<MyAfterTestAttribute>() != null);
 
-            foreach (var method in testMethods)
+            foreach (var method in methods.Where(m => m.GetCustomAttribute<MyTestAttribute>() != null))
             {
-                var testAttr = method.GetCustomAttribute<MyTestAttribute>();
-                
-                if (!string.IsNullOrEmpty(testAttr?.Skip))
-                {
-                    Console.WriteLine($"  [SKIP] {method.Name} (Причина: {testAttr.Skip})");
-                    skipped++;
-                    continue;
+                var attr = method.GetCustomAttribute<MyTestAttribute>();
+                if (!string.IsNullOrEmpty(attr?.Skip)) {
+                    Console.WriteLine($"  [SKIP] {method.Name}: {attr.Skip}");
+                    skipped++; continue;
                 }
-                
-                var testCases = method.GetCustomAttributes<MyTestCaseAttribute>().ToList();
-               
-                var casesToRun = testCases.Any() 
-                    ? testCases.Select(c => c.Params).ToList() 
-                    : new List<object[]> { null };
-                
-                foreach (var parameters in casesToRun)
+
+                var cases = method.GetCustomAttributes<MyTestCaseAttribute>().Select(c => c.Params).DefaultIfEmpty(null);
+                foreach (var args in cases)
                 {
                     var instance = Activator.CreateInstance(type);
-                    string paramInfo = parameters != null ? $"({string.Join(", ", parameters)})" : "";
+                    try {
+                        setup?.Invoke(instance, null);
+                        var result = method.Invoke(instance, args);
+                        if (result is Task task) await task;
+                        teardown?.Invoke(instance, null);
 
-                    try
-                    {
-                        setupMethod?.Invoke(instance, null);
-
-                        await InvokeMethodWithTaskSupport(method, instance, parameters);
-
-                        teardownMethod?.Invoke(instance, null);
-
-                        Console.WriteLine($"  [PASS] {method.Name}{paramInfo}");
+                        Console.WriteLine($"  [PASS] {method.Name}");
                         passed++;
                     }
-                    catch (TargetInvocationException ex) 
-                    {
-                        var inner = ex.InnerException;
-
-                        if (inner is MyTestFailedException) 
-                        {
-                            Console.WriteLine($"  [FAILED] {method.Name}{paramInfo}: {inner.Message}");
-                            failed++;
-                        }
-                        else 
-                        {
-                            Console.WriteLine($"  [ERROR] {method.Name}{paramInfo}: Исключение типа {inner?.GetType().Name}: {inner?.Message}");
-                            failed++;
-                        }
-                    }
-                     catch (Exception ex)
-                    {
-                        Console.WriteLine($"  [ARG_ERROR] {method.Name}{paramInfo}: {ex.Message}");
+                    catch (Exception ex) {
+                        var inner = ex is TargetInvocationException ? ex.InnerException : ex;
+                        string status = inner is MyTestFailedException ? "FAILED" : "ARG_ERROR";
+                        Console.WriteLine($"  [{status}] {method.Name}: {inner.Message}");
                         failed++;
                     }
                 }
             }
         }
-        
-        Console.WriteLine($"РЕЗУЛЬТАТЫ: Пройдено: {passed}, Провалено: {failed}, Пропущено: {skipped}");
-    }
-    
-    static async Task InvokeMethodWithTaskSupport(MethodInfo method, object instance, object[] parameters)
-    {
-        var result = method.Invoke(instance, parameters);
-        
-        if (result is Task task)
-        {
-            await task;
-        }
+        Console.WriteLine($"\nDone! Passed: {passed}, Failed: {failed}, Skipped: {skipped}");
     }
 }

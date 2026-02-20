@@ -1,5 +1,4 @@
-﻿
-namespace Library;
+﻿namespace Library;
 
 [AttributeUsage(AttributeTargets.Class)]
 public class MyTestClassAttribute : Attribute { }
@@ -18,7 +17,7 @@ public class MyTestCaseAttribute : Attribute
 }
 
 [AttributeUsage(AttributeTargets.Method)]
-public class MyBeforeTestAttribute : Attribute { } 
+public class MyBeforeTestAttribute : Attribute { }
 
 [AttributeUsage(AttributeTargets.Method)]
-public class MyAfterTestAttribute : Attribute { } 
+public class MyAfterTestAttribute : Attribute { }
