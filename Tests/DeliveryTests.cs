@@ -6,82 +6,82 @@ namespace Tests;
 [MyTestClass]
 public class DeliveryTests
 {
-    private DeliveryService _service;
-    private List<string> _tempLog;
+    private DeliveryManager _manager;
 
     [MyBeforeTest]
-    public void Setup() 
-    {
-        _service = new DeliveryService();
-        _tempLog = new List<string>();
+    public void Setup() {
+        _manager = new DeliveryManager();
+        _manager.CustomerName = "Алексей";
+        _manager.AddProduct("Базовый соус", 50);
     }
 
     [MyAfterTest]
-    public void Teardown() 
-    {
-        _service = null;
-        _tempLog = null;
+    public void Teardown() {
+        _manager = null;
     }
     
     [MyTest]
-    [MyTestCase(3000, 5, 0)]
-    [MyTestCase(10000, 2, 300)]
-    public void CalculateDelivery_VaryingOrderAmounts(int price, double dist, int exp) {
-        MyAssert.AreEqual(exp, _service.CalculateDelivery(price, dist));
+    [MyTestCase(940, 1000)]
+    [MyTestCase(450, 500)]
+    public void AddProduct_ValidPrice(int price, int expected) {
+        _manager.AddProduct("Тестовый товар", price);
+        MyAssert.AreEqual(expected, _manager.TotalAmount);
     }
-
+    
     [MyTest]
-    public void CalculateDelivery_SmallOrder() {
-        MyAssert.AreNotEqual(0m, _service.CalculateDelivery(100, 1));
+    public void AddProduct_Execution() {
+        decimal startPrice = _manager.TotalAmount;
+        _manager.AddProduct("Пицца", 600);
+        MyAssert.AreNotEqual(startPrice, _manager.TotalAmount);
     }
-
+    
     [MyTest]
-    public async Task ProcessPaymentAsync_PositiveAmount() {
-        bool result = await _service.ProcessPaymentAsync(100);
+    public async Task ConfirmOrderAsync_NormalConditions() {
+        bool result = await _manager.ConfirmOrderAsync(3.5);
         MyAssert.IsTrue(result);
     }
-
+    
     [MyTest]
-    public async Task ProcessPaymentAsync_NegativeAmount() {
-        bool result = await _service.ProcessPaymentAsync(-50);
+    public async Task ConfirmOrderAsync_StoreIsClosed() {
+        _manager.IsStoreOpen = false;
+        bool result = await _manager.ConfirmOrderAsync(1.0);
         MyAssert.IsFalse(result);
     }
-
+    
     [MyTest]
-    public void GetCourierStatus_InvalidId() {
-        MyAssert.IsNull(_service.GetCourierStatus(-1));
+    public void GetCourierPhone_UnknownId() {
+        MyAssert.IsNull(_manager.GetCourierPhone(-1));
+    }
+    
+    [MyTest]
+    public void Setup_WhenCalled() {
+        MyAssert.IsNotNull(_manager);
+    }
+    
+    [MyTest]
+    public void Cart_AfterSetup() {
+        MyAssert.IsNotEmpty(_manager.Cart);
+    }
+    
+    [MyTest]
+    public void Cart_LastAddedItem() {
+        _manager.AddProduct("Кола", 100);
+        var item = _manager.Cart[_manager.Cart.Count - 1];
+        MyAssert.Contains(item, _manager.Cart);
+    }
+    
+    [MyTest]
+    public void CartItem_WhenIndexed() {
+        MyAssert.IsInstanceOf<OrderItem>(_manager.Cart[0]);
+    }
+    
+    [MyTest]
+    public void AddProduct_InvalidPrice() {
+        MyAssert.Throws<ArgumentException>(() => _manager.AddProduct("Ошибка", -100));
     }
 
-    [MyTest]
-    public void GetCourierStatus_ValidId() {
-        MyAssert.IsNotNull(_service.GetCourierStatus(77));
-    }
-
-    [MyTest]
-    public void OrderItems_WhenAdded() {
-        var order = new Order { Items = { "Бургер" } };
-        MyAssert.IsNotEmpty(order.Items);
-    }
-
-    [MyTest]
-    public void OrderItems_SpecificItemAdded() {
-        var items = new List<string> { "Пицца", "Суши" };
-        MyAssert.Contains("Суши", items);
-    }
-
-    [MyTest]
-    public void OrderObject_UponCreation() {
-        var order = new Order();
-        MyAssert.IsInstanceOf<Order>(order);
-    }
-
-    [MyTest]
-    public void CalculateDelivery_NegativeDistance() {
-        MyAssert.Throws<ArgumentException>(() => _service.CalculateDelivery(100, -10));
-    }
-
-    [MyTest(Skip = "Фича отмены заказа в разработке")]
-    public void CancelOrder() {
+    [MyTest(Skip = "Ожидаем интеграции с картами")]
+    public void CalculateRoute_FeatureNotReady() {
         MyAssert.IsTrue(false);
     }
 }

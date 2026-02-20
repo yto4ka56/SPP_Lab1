@@ -1,23 +1,28 @@
-﻿namespace BusinessLogic;
+﻿
+namespace BusinessLogic;
 
-public class Order {
-    public List<string> Items { get; set; } = new();
+public class OrderItem {
+    public string Name { get; set; }
     public int Price { get; set; }
-    public bool IsExpress { get; set; }
 }
 
-public class DeliveryService
-{
-    public int CalculateDelivery(int amount, double distanceKm) {
-        if (distanceKm < 0) throw new ArgumentException("Negative distance");
-        if (amount >= 2000) return 0; 
-        return 200 + (int)(distanceKm * 50);
+public class DeliveryManager {
+    public string CustomerName { get; set; }
+    public int TotalAmount { get; private set; }
+    public List<OrderItem> Cart { get; } = new();
+    public bool IsStoreOpen { get; set; } = true;
+    
+    public void AddProduct(string name, int price) {
+        if (price <= 0) throw new ArgumentException("Цена должна быть больше нуля");
+        Cart.Add(new OrderItem { Name = name, Price = price });
+        TotalAmount += price;
     }
-
-    public async Task<bool> ProcessPaymentAsync(int amount) {
+    
+    public async Task<bool> ConfirmOrderAsync(double km) {
         await Task.Delay(50);
-        return amount > 0;
+        if (!IsStoreOpen || km <= 0 || Cart.Count == 0) return false;
+        return true;
     }
-
-    public string GetCourierStatus(int id) => id > 0 ? "Active" : null;
+    
+    public string GetCourierPhone(int id) => id > 0 ? "+7-900-123-45-67" : null;
 }
