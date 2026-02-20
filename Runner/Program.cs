@@ -41,7 +41,7 @@ class Program
                     }
                     catch (Exception ex) {
                         var inner = ex is TargetInvocationException ? ex.InnerException : ex;
-                        string status = inner is MyTestFailedException ? "FAILED" : "ARG_ERROR";
+                        string status = inner is MyTestFailedException ? "FAILED" : "ERROR";
                         Console.WriteLine($"  [{status}] {method.Name}: {inner.Message}");
                         failed++;
                     }
